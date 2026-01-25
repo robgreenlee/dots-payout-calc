@@ -20,9 +20,10 @@ interface NetResult {
   net: number;
 }
 
-const STAKE_PER_POINT = 0.25;
+const DEFAULT_STAKE = 0.25;
 
 export default function Home() {
+  const [stakePerPoint, setStakePerPoint] = useState(DEFAULT_STAKE);
   const [players, setPlayers] = useState<Player[]>([
     { name: "Player A", points: 0 },
     { name: "Player B", points: 0 },
@@ -60,7 +61,7 @@ export default function Home() {
         const pointDiff = Math.abs(p1.points - p2.points);
 
         if (pointDiff > 0) {
-          const amount = pointDiff * STAKE_PER_POINT;
+          const amount = pointDiff * stakePerPoint;
           const winner = p1.points > p2.points ? p1 : p2;
           const loser = p1.points > p2.points ? p2 : p1;
 
@@ -87,7 +88,7 @@ export default function Home() {
       .sort((a, b) => b.net - a.net);
 
     return { settlements, netResults };
-  }, [players]);
+  }, [players, stakePerPoint]);
 
   const totalPoints = players.reduce((sum, p) => sum + p.points, 0);
 
@@ -98,6 +99,7 @@ export default function Home() {
       { name: "Player C", points: 0 },
       { name: "Player D", points: 0 },
     ]);
+    setStakePerPoint(DEFAULT_STAKE);
   };
 
   return (
@@ -106,12 +108,21 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold mb-2">
-            🏌️ 6-Point Scotch
+            🏌️ Dots
           </h1>
           <p className="text-lg opacity-80">Payout Calculator</p>
-          <p className="text-sm opacity-60 mt-1">
-            ${STAKE_PER_POINT.toFixed(2)} per point
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="text-sm opacity-60">$</span>
+            <input
+              type="number"
+              value={stakePerPoint}
+              onChange={(e) => setStakePerPoint(parseFloat(e.target.value) || 0)}
+              className="w-20 px-2 py-1 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-sm"
+              step="0.05"
+              min="0"
+            />
+            <span className="text-sm opacity-60">per point</span>
+          </div>
         </div>
 
         {/* Player Inputs */}
@@ -248,14 +259,14 @@ export default function Home() {
             </div>
             <div>
               <h3 className="font-semibold mb-2">Payout</h3>
-              <p>Each player settles with every other player based on point differential × ${STAKE_PER_POINT.toFixed(2)}</p>
+              <p>Each player settles with every other player based on point differential × stake per point</p>
             </div>
           </div>
         </details>
 
         {/* Footer */}
         <footer className="text-center mt-8 text-sm opacity-50">
-          6-Point Scotch Payout Calculator
+          Dots Payout Calculator
         </footer>
       </div>
     </div>
