@@ -241,25 +241,38 @@ export default function Home() {
           </summary>
           <div className="mt-4 text-sm opacity-80 space-y-4">
             <div>
-              <h3 className="font-semibold mb-2">Point Distribution Per Hole</h3>
+              <h3 className="font-semibold mb-2">Teams</h3>
               <ul className="list-disc list-inside space-y-1">
-                <li>One player wins outright: Winner 4pts, Second 2pts, Others 0pts</li>
-                <li>Two tie for best: Tied winners 3pts each, Others 0pts</li>
-                <li>Three tie for best: Tied players 2pts each, Fourth 0pts</li>
-                <li>All four tie: Everyone 1.5pts each</li>
+                <li>Off the 1st tee, the two players on the right and left are partners for the first 9 holes</li>
+                <li>The team that loses the front 9 (lowest total) has the option to switch partners (flip a tee) or keep teams as-is for the back 9</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Partner Rotation</h3>
+              <h3 className="font-semibold mb-2">Points (6 available per hole)</h3>
               <ul className="list-disc list-inside space-y-1">
-                <li>Holes 1-6: A&B vs C&D</li>
-                <li>Holes 7-12: A&C vs B&D</li>
-                <li>Holes 13-18: A&D vs B&C</li>
+                <li>1 point for GIR (Green in Regulation)</li>
+                <li>2 points for low-man (net)</li>
+                <li>2 points for low-team (net)</li>
+                <li>1 point for birdie (gross only)</li>
+                <li>If a team gets all 6 points on a hole, points are doubled to 12</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Press & Roll</h3>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Team in the lead tees off first each hole</li>
+                <li><strong>Press:</strong> Before teeing off, the team behind can press — doubles points for EVERY remaining hole on that 9</li>
+                <li><strong>Roll:</strong> After the first group tees off, the team behind can roll — doubles points for ONLY that hole</li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-2">Payout</h3>
-              <p>Each player settles with every other player based on point differential × stake per point</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Score is maintained on a total basis for the round</li>
+                <li>At the end, add up total points per player and enter them into the calculator</li>
+                <li>Each player settles with every other player based on point differential × stake per point</li>
+                <li>Payments via Venmo or cash</li>
+              </ul>
             </div>
           </div>
         </details>
