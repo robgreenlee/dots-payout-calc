@@ -74,40 +74,47 @@ export default function Home() {
     };
 
     // Calculate front 9 settlements
+    // Each player pays/receives: point diff × stake
+    // Split across 2 opponents, so each transaction is half
     const front9Diff = front9.team1.points - front9.team2.points;
     if (front9Diff !== 0) {
-      const amount = Math.abs(front9Diff) * stakePerPoint;
+      const playerAmount = Math.abs(front9Diff) * stakePerPoint; // Total each player pays/receives
+      const perTransaction = playerAmount / 2; // Split between 2 opponents
       const winners = front9Diff > 0 ? front9.team1 : front9.team2;
       const losers = front9Diff > 0 ? front9.team2 : front9.team1;
 
-      // Each loser pays each winner
+      // Each loser pays each winner (split across both)
       [losers.player1, losers.player2].forEach((loser) => {
+        initPlayer(loser);
         [winners.player1, winners.player2].forEach((winner) => {
-          settlements.push({ from: loser, to: winner, amount, nine: "front" });
-          initPlayer(loser);
           initPlayer(winner);
-          playerAmounts[loser].front9 -= amount;
-          playerAmounts[winner].front9 += amount;
+          settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "front" });
         });
+        playerAmounts[loser].front9 -= playerAmount;
+      });
+      [winners.player1, winners.player2].forEach((winner) => {
+        playerAmounts[winner].front9 += playerAmount;
       });
     }
 
     // Calculate back 9 settlements
     const back9Diff = back9.team1.points - back9.team2.points;
     if (back9Diff !== 0) {
-      const amount = Math.abs(back9Diff) * stakePerPoint;
+      const playerAmount = Math.abs(back9Diff) * stakePerPoint;
+      const perTransaction = playerAmount / 2;
       const winners = back9Diff > 0 ? back9.team1 : back9.team2;
       const losers = back9Diff > 0 ? back9.team2 : back9.team1;
 
-      // Each loser pays each winner
       [losers.player1, losers.player2].forEach((loser) => {
+        initPlayer(loser);
         [winners.player1, winners.player2].forEach((winner) => {
-          settlements.push({ from: loser, to: winner, amount, nine: "back" });
-          initPlayer(loser);
           initPlayer(winner);
-          playerAmounts[loser].back9 -= amount;
-          playerAmounts[winner].back9 += amount;
+          settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "back" });
         });
+        playerAmounts[loser].back9 -= playerAmount;
+      });
+      [winners.player1, winners.player2].forEach((winner) => {
+        playerAmounts[winner].back9 += playerAmount;
       });
     }
 
