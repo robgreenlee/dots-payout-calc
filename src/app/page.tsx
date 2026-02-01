@@ -114,12 +114,12 @@ export default function Home() {
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className="text-sm opacity-60">$</span>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*\.?[0-9]*"
               value={stakePerPoint}
               onChange={(e) => setStakePerPoint(parseFloat(e.target.value) || 0)}
               className="w-20 px-2 py-1 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-sm"
-              step="0.05"
-              min="0"
             />
             <span className="text-sm opacity-60">per point</span>
           </div>
@@ -142,13 +142,13 @@ export default function Home() {
                   placeholder="Player name"
                 />
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
                   value={player.points || ""}
                   onChange={(e) => updatePlayerPoints(index, e.target.value)}
                   className="w-full sm:w-24 px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
                   placeholder="0"
-                  step="0.5"
-                  min="0"
                 />
               </div>
             ))}
