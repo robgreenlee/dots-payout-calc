@@ -2,16 +2,7 @@
 
 import { useState, useMemo } from "react";
 
-interface Team {
-  player1: string;
-  player2: string;
-  points: number;
-}
-
-interface NineHoles {
-  team1: Team;
-  team2: Team;
-}
+type Pairing = "AB_CD" | "AC_BD" | "AD_BC";
 
 interface Settlement {
   from: string;
@@ -29,96 +20,107 @@ interface PlayerNet {
 
 const DEFAULT_STAKE = 0.25;
 
+const PAIRING_OPTIONS: { value: Pairing; label: string }[] = [
+  { value: "AB_CD", label: "A & B vs C & D" },
+  { value: "AC_BD", label: "A & C vs B & D" },
+  { value: "AD_BC", label: "A & D vs B & C" },
+];
+
 export default function Home() {
   const [stakePerPoint, setStakePerPoint] = useState(DEFAULT_STAKE);
+  const [players, setPlayers] = useState(["Player A", "Player B", "Player C", "Player D"]);
 
-  const [front9, setFront9] = useState<NineHoles>({
-    team1: { player1: "Player A", player2: "Player B", points: 0 },
-    team2: { player1: "Player C", player2: "Player D", points: 0 },
-  });
+  const [front9Pairing, setFront9Pairing] = useState<Pairing>("AB_CD");
+  const [front9Team1Points, setFront9Team1Points] = useState(0);
+  const [front9Team2Points, setFront9Team2Points] = useState(0);
 
-  const [back9, setBack9] = useState<NineHoles>({
-    team1: { player1: "Player A", player2: "Player C", points: 0 },
-    team2: { player1: "Player B", player2: "Player D", points: 0 },
-  });
+  const [back9Pairing, setBack9Pairing] = useState<Pairing>("AB_CD");
+  const [back9Team1Points, setBack9Team1Points] = useState(0);
+  const [back9Team2Points, setBack9Team2Points] = useState(0);
 
-  const updateFront9 = (team: "team1" | "team2", field: keyof Team, value: string) => {
-    setFront9((prev) => ({
-      ...prev,
-      [team]: {
-        ...prev[team],
-        [field]: field === "points" ? (parseFloat(value) || 0) : value,
-      },
-    }));
+  const updatePlayerName = (index: number, name: string) => {
+    const newPlayers = [...players];
+    newPlayers[index] = name;
+    setPlayers(newPlayers);
   };
 
-  const updateBack9 = (team: "team1" | "team2", field: keyof Team, value: string) => {
-    setBack9((prev) => ({
-      ...prev,
-      [team]: {
-        ...prev[team],
-        [field]: field === "points" ? (parseFloat(value) || 0) : value,
-      },
-    }));
+  const getTeams = (pairing: Pairing) => {
+    const [A, B, C, D] = players;
+    switch (pairing) {
+      case "AB_CD":
+        return { team1: [A, B], team2: [C, D] };
+      case "AC_BD":
+        return { team1: [A, C], team2: [B, D] };
+      case "AD_BC":
+        return { team1: [A, D], team2: [B, C] };
+    }
+  };
+
+  const getTeamLabel = (pairing: Pairing, team: 1 | 2) => {
+    const [A, B, C, D] = players;
+    switch (pairing) {
+      case "AB_CD":
+        return team === 1 ? `${A} & ${B}` : `${C} & ${D}`;
+      case "AC_BD":
+        return team === 1 ? `${A} & ${C}` : `${B} & ${D}`;
+      case "AD_BC":
+        return team === 1 ? `${A} & ${D}` : `${B} & ${C}`;
+    }
   };
 
   const { settlements, playerNets } = useMemo(() => {
     const settlements: Settlement[] = [];
     const playerAmounts: { [key: string]: { front9: number; back9: number } } = {};
 
-    // Helper to initialize player
     const initPlayer = (name: string) => {
       if (!playerAmounts[name]) {
         playerAmounts[name] = { front9: 0, back9: 0 };
       }
     };
 
-    // Calculate front 9 settlements
-    // Each player pays/receives: point diff × stake
-    // Split across 2 opponents, so each transaction is half
-    const front9Diff = front9.team1.points - front9.team2.points;
-    if (front9Diff !== 0) {
-      const playerAmount = Math.abs(front9Diff) * stakePerPoint; // Total each player pays/receives
-      const perTransaction = playerAmount / 2; // Split between 2 opponents
-      const winners = front9Diff > 0 ? front9.team1 : front9.team2;
-      const losers = front9Diff > 0 ? front9.team2 : front9.team1;
+    // Initialize all players
+    players.forEach(initPlayer);
 
-      // Each loser pays each winner (split across both)
-      [losers.player1, losers.player2].forEach((loser) => {
-        initPlayer(loser);
-        [winners.player1, winners.player2].forEach((winner) => {
-          initPlayer(winner);
+    // Calculate front 9 settlements
+    const front9Teams = getTeams(front9Pairing);
+    const front9Diff = front9Team1Points - front9Team2Points;
+    if (front9Diff !== 0) {
+      const playerAmount = Math.abs(front9Diff) * stakePerPoint;
+      const perTransaction = playerAmount / 2;
+      const winners = front9Diff > 0 ? front9Teams.team1 : front9Teams.team2;
+      const losers = front9Diff > 0 ? front9Teams.team2 : front9Teams.team1;
+
+      losers.forEach((loser) => {
+        winners.forEach((winner) => {
           settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "front" });
         });
         playerAmounts[loser].front9 -= playerAmount;
       });
-      [winners.player1, winners.player2].forEach((winner) => {
+      winners.forEach((winner) => {
         playerAmounts[winner].front9 += playerAmount;
       });
     }
 
     // Calculate back 9 settlements
-    const back9Diff = back9.team1.points - back9.team2.points;
+    const back9Teams = getTeams(back9Pairing);
+    const back9Diff = back9Team1Points - back9Team2Points;
     if (back9Diff !== 0) {
       const playerAmount = Math.abs(back9Diff) * stakePerPoint;
       const perTransaction = playerAmount / 2;
-      const winners = back9Diff > 0 ? back9.team1 : back9.team2;
-      const losers = back9Diff > 0 ? back9.team2 : back9.team1;
+      const winners = back9Diff > 0 ? back9Teams.team1 : back9Teams.team2;
+      const losers = back9Diff > 0 ? back9Teams.team2 : back9Teams.team1;
 
-      [losers.player1, losers.player2].forEach((loser) => {
-        initPlayer(loser);
-        [winners.player1, winners.player2].forEach((winner) => {
-          initPlayer(winner);
+      losers.forEach((loser) => {
+        winners.forEach((winner) => {
           settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "back" });
         });
         playerAmounts[loser].back9 -= playerAmount;
       });
-      [winners.player1, winners.player2].forEach((winner) => {
+      winners.forEach((winner) => {
         playerAmounts[winner].back9 += playerAmount;
       });
     }
 
-    // Calculate net results per player
     const playerNets: PlayerNet[] = Object.entries(playerAmounts)
       .map(([name, amounts]) => ({
         name,
@@ -129,63 +131,104 @@ export default function Home() {
       .sort((a, b) => b.total - a.total);
 
     return { settlements, playerNets };
-  }, [front9, back9, stakePerPoint]);
+  }, [players, front9Pairing, front9Team1Points, front9Team2Points, back9Pairing, back9Team1Points, back9Team2Points, stakePerPoint]);
 
   const resetAll = () => {
-    setFront9({
-      team1: { player1: "Player A", player2: "Player B", points: 0 },
-      team2: { player1: "Player C", player2: "Player D", points: 0 },
-    });
-    setBack9({
-      team1: { player1: "Player A", player2: "Player C", points: 0 },
-      team2: { player1: "Player B", player2: "Player D", points: 0 },
-    });
+    setPlayers(["Player A", "Player B", "Player C", "Player D"]);
+    setFront9Pairing("AB_CD");
+    setFront9Team1Points(0);
+    setFront9Team2Points(0);
+    setBack9Pairing("AB_CD");
+    setBack9Team1Points(0);
+    setBack9Team2Points(0);
     setStakePerPoint(DEFAULT_STAKE);
   };
 
   const front9Settlements = settlements.filter((s) => s.nine === "front");
   const back9Settlements = settlements.filter((s) => s.nine === "back");
 
-  const TeamInput = ({
-    team,
-    nine,
-    teamKey,
-    updateFn,
+  const NineSection = ({
+    title,
+    pairing,
+    setPairing,
+    team1Points,
+    setTeam1Points,
+    team2Points,
+    setTeam2Points,
+    nineSettlements,
   }: {
-    team: Team;
-    nine: "front" | "back";
-    teamKey: "team1" | "team2";
-    updateFn: (team: "team1" | "team2", field: keyof Team, value: string) => void;
+    title: string;
+    pairing: Pairing;
+    setPairing: (p: Pairing) => void;
+    team1Points: number;
+    setTeam1Points: (p: number) => void;
+    team2Points: number;
+    setTeam2Points: (p: number) => void;
+    nineSettlements: Settlement[];
   }) => (
-    <div className="bg-white/5 rounded-lg p-3 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="text"
-          value={team.player1}
-          onChange={(e) => updateFn(teamKey, "player1", e.target.value)}
-          className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
-          placeholder="Player 1"
-        />
-        <input
-          type="text"
-          value={team.player2}
-          onChange={(e) => updateFn(teamKey, "player2", e.target.value)}
-          className="px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
-          placeholder="Player 2"
-        />
+    <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
+      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+
+      {/* Pairing Selector */}
+      <div className="mb-4">
+        <label className="text-sm opacity-70 block mb-1">Team Pairing</label>
+        <select
+          value={pairing}
+          onChange={(e) => setPairing(e.target.value as Pairing)}
+          className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+        >
+          {PAIRING_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value} className="bg-gray-800">
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs opacity-60">Team Points:</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          pattern="[0-9]*\.?[0-9]*"
-          value={team.points || ""}
-          onChange={(e) => updateFn(teamKey, "points", e.target.value)}
-          className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-base"
-          placeholder="0"
-        />
+
+      {/* Team Points */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white/5 rounded-lg p-3">
+          <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 1)}</div>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*\.?[0-9]*"
+            value={team1Points || ""}
+            onChange={(e) => setTeam1Points(parseFloat(e.target.value) || 0)}
+            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
+            placeholder="0"
+          />
+        </div>
+        <div className="bg-white/5 rounded-lg p-3">
+          <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 2)}</div>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*\.?[0-9]*"
+            value={team2Points || ""}
+            onChange={(e) => setTeam2Points(parseFloat(e.target.value) || 0)}
+            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
+            placeholder="0"
+          />
+        </div>
       </div>
+
+      {/* Settlements for this 9 */}
+      {nineSettlements.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="text-sm font-medium mb-2 opacity-70">{title} Settlements</div>
+          <div className="space-y-1">
+            {nineSettlements.map((s, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span>
+                  {s.from} → {s.to}
+                </span>
+                <span className="font-mono text-green-400">${s.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -193,7 +236,7 @@ export default function Home() {
     <div className="min-h-screen p-4 sm:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold mb-2">🏌️ Dots</h1>
           <p className="text-lg opacity-80">Payout Calculator</p>
           <div className="flex items-center justify-center gap-2 mt-2">
@@ -210,65 +253,46 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Front 9 */}
+        {/* Player Names */}
         <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Front 9</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <div className="text-sm font-medium mb-2 opacity-70">Team 1</div>
-              <TeamInput team={front9.team1} nine="front" teamKey="team1" updateFn={updateFront9} />
-            </div>
-            <div>
-              <div className="text-sm font-medium mb-2 opacity-70">Team 2</div>
-              <TeamInput team={front9.team2} nine="front" teamKey="team2" updateFn={updateFront9} />
-            </div>
+          <h2 className="text-lg font-semibold mb-3">Players</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {players.map((name, index) => (
+              <input
+                key={index}
+                type="text"
+                value={name}
+                onChange={(e) => updatePlayerName(index, e.target.value)}
+                className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                placeholder={`Player ${String.fromCharCode(65 + index)}`}
+              />
+            ))}
           </div>
-          {front9Settlements.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <div className="text-sm font-medium mb-2 opacity-70">Front 9 Settlements</div>
-              <div className="space-y-1">
-                {front9Settlements.map((s, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span>
-                      {s.from} → {s.to}
-                    </span>
-                    <span className="font-mono text-green-400">${s.amount.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
+        {/* Front 9 */}
+        <NineSection
+          title="Front 9"
+          pairing={front9Pairing}
+          setPairing={setFront9Pairing}
+          team1Points={front9Team1Points}
+          setTeam1Points={setFront9Team1Points}
+          team2Points={front9Team2Points}
+          setTeam2Points={setFront9Team2Points}
+          nineSettlements={front9Settlements}
+        />
+
         {/* Back 9 */}
-        <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Back 9</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <div className="text-sm font-medium mb-2 opacity-70">Team 1</div>
-              <TeamInput team={back9.team1} nine="back" teamKey="team1" updateFn={updateBack9} />
-            </div>
-            <div>
-              <div className="text-sm font-medium mb-2 opacity-70">Team 2</div>
-              <TeamInput team={back9.team2} nine="back" teamKey="team2" updateFn={updateBack9} />
-            </div>
-          </div>
-          {back9Settlements.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <div className="text-sm font-medium mb-2 opacity-70">Back 9 Settlements</div>
-              <div className="space-y-1">
-                {back9Settlements.map((s, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span>
-                      {s.from} → {s.to}
-                    </span>
-                    <span className="font-mono text-green-400">${s.amount.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <NineSection
+          title="Back 9"
+          pairing={back9Pairing}
+          setPairing={setBack9Pairing}
+          team1Points={back9Team1Points}
+          setTeam1Points={setBack9Team1Points}
+          team2Points={back9Team2Points}
+          setTeam2Points={setBack9Team2Points}
+          nineSettlements={back9Settlements}
+        />
 
         {/* Reset Button */}
         <div className="flex justify-end mb-4">
@@ -281,7 +305,7 @@ export default function Home() {
         </div>
 
         {/* Net Results */}
-        {playerNets.length > 0 && playerNets.some((p) => p.total !== 0) && (
+        {playerNets.some((p) => p.total !== 0) && (
           <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 shadow-lg">
             <h2 className="text-xl font-semibold mb-4">📊 Final Results</h2>
             <div className="space-y-2">
