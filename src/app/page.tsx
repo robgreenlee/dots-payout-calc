@@ -115,6 +115,7 @@ export default function Home() {
             <span className="text-sm opacity-60">$</span>
             <input
               type="number"
+              inputMode="decimal"
               value={stakePerPoint}
               onChange={(e) => setStakePerPoint(parseFloat(e.target.value) || 0)}
               className="w-20 px-2 py-1 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-sm"
@@ -143,6 +144,7 @@ export default function Home() {
                 />
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={player.points || ""}
                   onChange={(e) => updatePlayerPoints(index, e.target.value)}
                   className="w-full sm:w-24 px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
