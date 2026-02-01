@@ -4,13 +4,6 @@ import { useState, useMemo } from "react";
 
 type Pairing = "AB_CD" | "AC_BD" | "AD_BC";
 
-interface Settlement {
-  from: string;
-  to: string;
-  amount: number;
-  nine: "front" | "back";
-}
-
 interface PlayerNet {
   name: string;
   front9: number;
@@ -68,32 +61,23 @@ export default function Home() {
     }
   };
 
-  const { settlements, playerNets } = useMemo(() => {
-    const settlements: Settlement[] = [];
+  const playerNets = useMemo(() => {
     const playerAmounts: { [key: string]: { front9: number; back9: number } } = {};
 
-    const initPlayer = (name: string) => {
-      if (!playerAmounts[name]) {
-        playerAmounts[name] = { front9: 0, back9: 0 };
-      }
-    };
-
     // Initialize all players
-    players.forEach(initPlayer);
+    players.forEach((name) => {
+      playerAmounts[name] = { front9: 0, back9: 0 };
+    });
 
-    // Calculate front 9 settlements
+    // Calculate front 9
     const front9Teams = getTeams(front9Pairing);
     const front9Diff = front9Team1Points - front9Team2Points;
     if (front9Diff !== 0) {
       const playerAmount = Math.abs(front9Diff) * stakePerPoint;
-      const perTransaction = playerAmount / 2;
       const winners = front9Diff > 0 ? front9Teams.team1 : front9Teams.team2;
       const losers = front9Diff > 0 ? front9Teams.team2 : front9Teams.team1;
 
       losers.forEach((loser) => {
-        winners.forEach((winner) => {
-          settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "front" });
-        });
         playerAmounts[loser].front9 -= playerAmount;
       });
       winners.forEach((winner) => {
@@ -101,19 +85,15 @@ export default function Home() {
       });
     }
 
-    // Calculate back 9 settlements
+    // Calculate back 9
     const back9Teams = getTeams(back9Pairing);
     const back9Diff = back9Team1Points - back9Team2Points;
     if (back9Diff !== 0) {
       const playerAmount = Math.abs(back9Diff) * stakePerPoint;
-      const perTransaction = playerAmount / 2;
       const winners = back9Diff > 0 ? back9Teams.team1 : back9Teams.team2;
       const losers = back9Diff > 0 ? back9Teams.team2 : back9Teams.team1;
 
       losers.forEach((loser) => {
-        winners.forEach((winner) => {
-          settlements.push({ from: loser, to: winner, amount: perTransaction, nine: "back" });
-        });
         playerAmounts[loser].back9 -= playerAmount;
       });
       winners.forEach((winner) => {
@@ -121,7 +101,7 @@ export default function Home() {
       });
     }
 
-    const playerNets: PlayerNet[] = Object.entries(playerAmounts)
+    return Object.entries(playerAmounts)
       .map(([name, amounts]) => ({
         name,
         front9: amounts.front9,
@@ -129,8 +109,6 @@ export default function Home() {
         total: amounts.front9 + amounts.back9,
       }))
       .sort((a, b) => b.total - a.total);
-
-    return { settlements, playerNets };
   }, [players, front9Pairing, front9Team1Points, front9Team2Points, back9Pairing, back9Team1Points, back9Team2Points, stakePerPoint]);
 
   const resetAll = () => {
@@ -144,9 +122,6 @@ export default function Home() {
     setStakePerPoint(DEFAULT_STAKE);
   };
 
-  const front9Settlements = settlements.filter((s) => s.nine === "front");
-  const back9Settlements = settlements.filter((s) => s.nine === "back");
-
   const NineSection = ({
     title,
     pairing,
@@ -155,7 +130,6 @@ export default function Home() {
     setTeam1Points,
     team2Points,
     setTeam2Points,
-    nineSettlements,
   }: {
     title: string;
     pairing: Pairing;
@@ -164,73 +138,84 @@ export default function Home() {
     setTeam1Points: (p: number) => void;
     team2Points: number;
     setTeam2Points: (p: number) => void;
-    nineSettlements: Settlement[];
-  }) => (
-    <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+  }) => {
+    const pointDiff = team1Points - team2Points;
+    const teams = getTeams(pairing);
+    const playerAmount = Math.abs(pointDiff) * stakePerPoint;
+    const winners = pointDiff > 0 ? teams.team1 : teams.team2;
+    const losers = pointDiff > 0 ? teams.team2 : teams.team1;
 
-      {/* Pairing Selector */}
-      <div className="mb-4">
-        <label className="text-sm opacity-70 block mb-1">Team Pairing</label>
-        <select
-          value={pairing}
-          onChange={(e) => setPairing(e.target.value as Pairing)}
-          className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-        >
-          {PAIRING_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-gray-800">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+    return (
+      <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
+        <h2 className="text-xl font-semibold mb-4">{title}</h2>
 
-      {/* Team Points */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 1)}</div>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            value={team1Points || ""}
-            onChange={(e) => setTeam1Points(parseFloat(e.target.value) || 0)}
-            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
-            placeholder="0"
-          />
-        </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 2)}</div>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            value={team2Points || ""}
-            onChange={(e) => setTeam2Points(parseFloat(e.target.value) || 0)}
-            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      {/* Settlements for this 9 */}
-      {nineSettlements.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="text-sm font-medium mb-2 opacity-70">{title} Settlements</div>
-          <div className="space-y-1">
-            {nineSettlements.map((s, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span>
-                  {s.from} → {s.to}
-                </span>
-                <span className="font-mono text-green-400">${s.amount.toFixed(2)}</span>
-              </div>
+        {/* Pairing Selector */}
+        <div className="mb-4">
+          <label className="text-sm opacity-70 block mb-1">Team Pairing</label>
+          <select
+            value={pairing}
+            onChange={(e) => setPairing(e.target.value as Pairing)}
+            className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+          >
+            {PAIRING_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value} className="bg-gray-800">
+                {opt.label}
+              </option>
             ))}
+          </select>
+        </div>
+
+        {/* Team Points */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/5 rounded-lg p-3">
+            <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 1)}</div>
+            <input
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*\.?[0-9]*"
+              value={team1Points || ""}
+              onChange={(e) => setTeam1Points(parseFloat(e.target.value) || 0)}
+              className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
+              placeholder="0"
+            />
+          </div>
+          <div className="bg-white/5 rounded-lg p-3">
+            <div className="text-xs opacity-70 mb-1 truncate">{getTeamLabel(pairing, 2)}</div>
+            <input
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*\.?[0-9]*"
+              value={team2Points || ""}
+              onChange={(e) => setTeam2Points(parseFloat(e.target.value) || 0)}
+              className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
+              placeholder="0"
+            />
           </div>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Per-player results for this 9 */}
+        {pointDiff !== 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="text-sm font-medium mb-2 opacity-70">{title} Results</div>
+            <div className="grid grid-cols-2 gap-2">
+              {losers.map((player) => (
+                <div key={player} className="flex justify-between text-sm bg-red-500/10 rounded px-2 py-1">
+                  <span>{player}</span>
+                  <span className="font-mono text-red-400">-${playerAmount.toFixed(2)}</span>
+                </div>
+              ))}
+              {winners.map((player) => (
+                <div key={player} className="flex justify-between text-sm bg-green-500/10 rounded px-2 py-1">
+                  <span>{player}</span>
+                  <span className="font-mono text-green-400">+${playerAmount.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen p-4 sm:p-8">
@@ -279,7 +264,6 @@ export default function Home() {
           setTeam1Points={setFront9Team1Points}
           team2Points={front9Team2Points}
           setTeam2Points={setFront9Team2Points}
-          nineSettlements={front9Settlements}
         />
 
         {/* Back 9 */}
@@ -291,7 +275,6 @@ export default function Home() {
           setTeam1Points={setBack9Team1Points}
           team2Points={back9Team2Points}
           setTeam2Points={setBack9Team2Points}
-          nineSettlements={back9Settlements}
         />
 
         {/* Reset Button */}
