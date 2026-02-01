@@ -128,17 +128,17 @@ export default function Home() {
         {/* Player Inputs */}
         <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Enter Final Points</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
             {players.map((player, index) => (
               <div
                 key={index}
-                className="flex flex-col sm:flex-row gap-2 p-3 bg-white/5 rounded-lg"
+                className="flex flex-col gap-1 p-2 sm:p-3 bg-white/5 rounded-lg"
               >
                 <input
                   type="text"
                   value={player.name}
                   onChange={(e) => updatePlayerName(index, e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  className="w-full px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
                   placeholder="Player name"
                 />
                 <input
@@ -147,7 +147,7 @@ export default function Home() {
                   pattern="[0-9]*\.?[0-9]*"
                   value={player.points || ""}
                   onChange={(e) => updatePlayerPoints(index, e.target.value)}
-                  className="w-full sm:w-24 px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
+                  className="w-full px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-base sm:text-lg"
                   placeholder="0"
                 />
               </div>
