@@ -3,13 +3,7 @@
 import { useState, useMemo } from "react";
 
 type Pairing = "AB_CD" | "AC_BD" | "AD_BC";
-
-interface PlayerNet {
-  name: string;
-  front9: number;
-  back9: number;
-  total: number;
-}
+type GameMode = "9hole" | "6hole";
 
 const DEFAULT_STAKE = 0.25;
 
@@ -43,8 +37,8 @@ const getTeamLabelForPairing = (pairing: Pairing, team: 1 | 2, players: string[]
   }
 };
 
-// NineSection component defined outside Home to prevent re-mounting on state changes
-function NineSection({
+// Segment section component defined outside Home to prevent re-mounting on state changes
+function SegmentSection({
   title,
   pairing,
   setPairing,
@@ -123,7 +117,7 @@ function NineSection({
         </div>
       </div>
 
-      {/* Per-player results for this 9 */}
+      {/* Per-segment results */}
       {pointDiff !== 0 && (
         <div className="mt-4 pt-4 border-t border-white/10">
           <div className="text-sm font-medium mb-2 opacity-70">{title} Results</div>
@@ -154,16 +148,32 @@ function NineSection({
 }
 
 export default function Home() {
+  const [gameMode, setGameMode] = useState<GameMode>("9hole");
   const [stakePerPoint, setStakePerPoint] = useState(DEFAULT_STAKE);
   const [players, setPlayers] = useState(["Player A", "Player B", "Player C", "Player D"]);
 
-  const [front9Pairing, setFront9Pairing] = useState<Pairing>("AB_CD");
-  const [front9Team1Points, setFront9Team1Points] = useState(0);
-  const [front9Team2Points, setFront9Team2Points] = useState(0);
+  // Segment 1: Front 9 or Holes 1-6
+  const [seg1Pairing, setSeg1Pairing] = useState<Pairing>("AB_CD");
+  const [seg1Team1Points, setSeg1Team1Points] = useState(0);
+  const [seg1Team2Points, setSeg1Team2Points] = useState(0);
 
-  const [back9Pairing, setBack9Pairing] = useState<Pairing>("AB_CD");
-  const [back9Team1Points, setBack9Team1Points] = useState(0);
-  const [back9Team2Points, setBack9Team2Points] = useState(0);
+  // Segment 2: Back 9 or Holes 7-12
+  const [seg2Pairing, setSeg2Pairing] = useState<Pairing>("AB_CD");
+  const [seg2Team1Points, setSeg2Team1Points] = useState(0);
+  const [seg2Team2Points, setSeg2Team2Points] = useState(0);
+
+  // Segment 3: Holes 13-18 (6-hole mode only)
+  const [seg3Pairing, setSeg3Pairing] = useState<Pairing>("AB_CD");
+  const [seg3Team1Points, setSeg3Team1Points] = useState(0);
+  const [seg3Team2Points, setSeg3Team2Points] = useState(0);
+
+  const segmentLabels = gameMode === "9hole"
+    ? ["Front 9", "Back 9"]
+    : ["Holes 1–6", "Holes 7–12", "Holes 13–18"];
+
+  const segmentShortLabels = gameMode === "9hole"
+    ? ["F9", "B9"]
+    : ["1–6", "7–12", "13–18"];
 
   const updatePlayerName = (index: number, name: string) => {
     const newPlayers = [...players];
@@ -171,73 +181,57 @@ export default function Home() {
     setPlayers(newPlayers);
   };
 
+  const calcSegment = (pairing: Pairing, team1Points: number, team2Points: number) => {
+    const teams = getTeamsForPairing(pairing, players);
+    const diff = team1Points - team2Points;
+    const amounts: { [key: string]: number } = {};
+    players.forEach((name) => { amounts[name] = 0; });
+
+    if (diff !== 0) {
+      const playerAmount = Math.abs(diff) * stakePerPoint;
+      const winners = diff > 0 ? teams.team1 : teams.team2;
+      const losers = diff > 0 ? teams.team2 : teams.team1;
+      losers.forEach((l) => { amounts[l] -= playerAmount; });
+      winners.forEach((w) => { amounts[w] += playerAmount; });
+    }
+    return amounts;
+  };
+
   const playerNets = useMemo(() => {
-    const playerAmounts: { [key: string]: { front9: number; back9: number } } = {};
+    const seg1 = calcSegment(seg1Pairing, seg1Team1Points, seg1Team2Points);
+    const seg2 = calcSegment(seg2Pairing, seg2Team1Points, seg2Team2Points);
+    const seg3 = gameMode === "6hole"
+      ? calcSegment(seg3Pairing, seg3Team1Points, seg3Team2Points)
+      : null;
 
-    // Initialize all players
-    players.forEach((name) => {
-      playerAmounts[name] = { front9: 0, back9: 0 };
-    });
-
-    // Calculate front 9
-    const front9Teams = getTeamsForPairing(front9Pairing, players);
-    const front9Diff = front9Team1Points - front9Team2Points;
-    if (front9Diff !== 0) {
-      const playerAmount = Math.abs(front9Diff) * stakePerPoint;
-      const winners = front9Diff > 0 ? front9Teams.team1 : front9Teams.team2;
-      const losers = front9Diff > 0 ? front9Teams.team2 : front9Teams.team1;
-
-      losers.forEach((loser) => {
-        playerAmounts[loser].front9 -= playerAmount;
-      });
-      winners.forEach((winner) => {
-        playerAmounts[winner].front9 += playerAmount;
-      });
-    }
-
-    // Calculate back 9
-    const back9Teams = getTeamsForPairing(back9Pairing, players);
-    const back9Diff = back9Team1Points - back9Team2Points;
-    if (back9Diff !== 0) {
-      const playerAmount = Math.abs(back9Diff) * stakePerPoint;
-      const winners = back9Diff > 0 ? back9Teams.team1 : back9Teams.team2;
-      const losers = back9Diff > 0 ? back9Teams.team2 : back9Teams.team1;
-
-      losers.forEach((loser) => {
-        playerAmounts[loser].back9 -= playerAmount;
-      });
-      winners.forEach((winner) => {
-        playerAmounts[winner].back9 += playerAmount;
-      });
-    }
-
-    return Object.entries(playerAmounts)
-      .map(([name, amounts]) => ({
-        name,
-        front9: amounts.front9,
-        back9: amounts.back9,
-        total: amounts.front9 + amounts.back9,
-      }))
+    return players
+      .map((name) => {
+        const segments = [seg1[name], seg2[name]];
+        if (seg3) segments.push(seg3[name]);
+        const total = segments.reduce((sum, v) => sum + v, 0);
+        return { name, segments, total };
+      })
       .sort((a, b) => b.total - a.total);
   }, [
     players,
-    front9Pairing,
-    front9Team1Points,
-    front9Team2Points,
-    back9Pairing,
-    back9Team1Points,
-    back9Team2Points,
+    gameMode,
+    seg1Pairing, seg1Team1Points, seg1Team2Points,
+    seg2Pairing, seg2Team1Points, seg2Team2Points,
+    seg3Pairing, seg3Team1Points, seg3Team2Points,
     stakePerPoint,
   ]);
 
   const resetAll = () => {
     setPlayers(["Player A", "Player B", "Player C", "Player D"]);
-    setFront9Pairing("AB_CD");
-    setFront9Team1Points(0);
-    setFront9Team2Points(0);
-    setBack9Pairing("AB_CD");
-    setBack9Team1Points(0);
-    setBack9Team2Points(0);
+    setSeg1Pairing("AB_CD");
+    setSeg1Team1Points(0);
+    setSeg1Team2Points(0);
+    setSeg2Pairing("AB_CD");
+    setSeg2Team1Points(0);
+    setSeg2Team2Points(0);
+    setSeg3Pairing("AB_CD");
+    setSeg3Team1Points(0);
+    setSeg3Team2Points(0);
     setStakePerPoint(DEFAULT_STAKE);
   };
 
@@ -262,6 +256,19 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Game Mode Selector */}
+        <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
+          <h2 className="text-lg font-semibold mb-3">Game Format</h2>
+          <select
+            value={gameMode}
+            onChange={(e) => setGameMode(e.target.value as GameMode)}
+            className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+          >
+            <option value="9hole" className="bg-gray-800">9-Hole Pairings (Front 9 / Back 9)</option>
+            <option value="6hole" className="bg-gray-800">6-Hole Pairings (switch every 6 holes)</option>
+          </select>
+        </div>
+
         {/* Player Names */}
         <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
           <h2 className="text-lg font-semibold mb-3">Players</h2>
@@ -279,31 +286,46 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Front 9 */}
-        <NineSection
-          title="Front 9"
-          pairing={front9Pairing}
-          setPairing={setFront9Pairing}
-          team1Points={front9Team1Points}
-          setTeam1Points={setFront9Team1Points}
-          team2Points={front9Team2Points}
-          setTeam2Points={setFront9Team2Points}
+        {/* Segment 1 */}
+        <SegmentSection
+          title={segmentLabels[0]}
+          pairing={seg1Pairing}
+          setPairing={setSeg1Pairing}
+          team1Points={seg1Team1Points}
+          setTeam1Points={setSeg1Team1Points}
+          team2Points={seg1Team2Points}
+          setTeam2Points={setSeg1Team2Points}
           players={players}
           stakePerPoint={stakePerPoint}
         />
 
-        {/* Back 9 */}
-        <NineSection
-          title="Back 9"
-          pairing={back9Pairing}
-          setPairing={setBack9Pairing}
-          team1Points={back9Team1Points}
-          setTeam1Points={setBack9Team1Points}
-          team2Points={back9Team2Points}
-          setTeam2Points={setBack9Team2Points}
+        {/* Segment 2 */}
+        <SegmentSection
+          title={segmentLabels[1]}
+          pairing={seg2Pairing}
+          setPairing={setSeg2Pairing}
+          team1Points={seg2Team1Points}
+          setTeam1Points={setSeg2Team1Points}
+          team2Points={seg2Team2Points}
+          setTeam2Points={setSeg2Team2Points}
           players={players}
           stakePerPoint={stakePerPoint}
         />
+
+        {/* Segment 3 (6-hole mode only) */}
+        {gameMode === "6hole" && (
+          <SegmentSection
+            title={segmentLabels[2]}
+            pairing={seg3Pairing}
+            setPairing={setSeg3Pairing}
+            team1Points={seg3Team1Points}
+            setTeam1Points={setSeg3Team1Points}
+            team2Points={seg3Team2Points}
+            setTeam2Points={setSeg3Team2Points}
+            players={players}
+            stakePerPoint={stakePerPoint}
+          />
+        )}
 
         {/* Reset Button */}
         <div className="flex justify-end mb-4">
@@ -334,8 +356,12 @@ export default function Home() {
                   <div>
                     <span className="font-medium">{player.name}</span>
                     <div className="text-xs opacity-60">
-                      F9: {player.front9 >= 0 ? "+" : ""}${player.front9.toFixed(2)} | B9:{" "}
-                      {player.back9 >= 0 ? "+" : ""}${player.back9.toFixed(2)}
+                      {player.segments.map((amt, i) => (
+                        <span key={i}>
+                          {i > 0 && " | "}
+                          {segmentShortLabels[i]}: {amt >= 0 ? "+" : ""}${amt.toFixed(2)}
+                        </span>
+                      ))}
                     </div>
                   </div>
                   <span
@@ -360,11 +386,15 @@ export default function Home() {
               <ul className="list-disc list-inside space-y-1">
                 <li>
                   Off the 1st tee, the two players on the right and left are partners for the first
-                  9 holes
+                  segment
                 </li>
                 <li>
-                  The team that loses the front 9 (lowest total) has the option to switch partners
-                  (flip a tee) or keep teams as-is for the back 9
+                  <strong>9-Hole mode:</strong> The losing team after the front 9 can switch partners
+                  (flip a tee) or keep teams for the back 9
+                </li>
+                <li>
+                  <strong>6-Hole mode:</strong> Teams can be re-selected every 6 holes (3 segments
+                  per round)
                 </li>
               </ul>
             </div>
@@ -384,7 +414,7 @@ export default function Home() {
                 <li>Team in the lead tees off first each hole</li>
                 <li>
                   <strong>Press:</strong> Before teeing off, the team behind can press — doubles
-                  points for EVERY remaining hole on that 9
+                  points for EVERY remaining hole in that segment
                 </li>
                 <li>
                   <strong>Roll:</strong> After the first group tees off, the team behind can roll —
@@ -395,7 +425,7 @@ export default function Home() {
             <div>
               <h3 className="font-semibold mb-2">Payout</h3>
               <ul className="list-disc list-inside space-y-1">
-                <li>At the end of each 9, calculate team point differential</li>
+                <li>At the end of each segment, calculate team point differential</li>
                 <li>Each player on the losing team pays each player on the winning team</li>
                 <li>Payment = point differential × stake per point</li>
                 <li>Payments via Venmo or cash</li>
