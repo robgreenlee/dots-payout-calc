@@ -1,442 +1,151 @@
-"use client";
+import Link from "next/link";
+import SectionHeading from "@/components/SectionHeading";
+import { SCHOOLS, BOARD_MEMBERS, SITE_INFO, UPCOMING_EVENT } from "@/lib/constants";
 
-import { useState, useMemo } from "react";
-
-type Pairing = "AB_CD" | "AC_BD" | "AD_BC";
-type GameMode = "9hole" | "6hole";
-
-const DEFAULT_STAKE = 0.25;
-
-const PAIRING_OPTIONS: { value: Pairing; label: string }[] = [
-  { value: "AB_CD", label: "A & B vs C & D" },
-  { value: "AC_BD", label: "A & C vs B & D" },
-  { value: "AD_BC", label: "A & D vs B & C" },
-];
-
-const getTeamsForPairing = (pairing: Pairing, players: string[]) => {
-  const [A, B, C, D] = players;
-  switch (pairing) {
-    case "AB_CD":
-      return { team1: [A, B], team2: [C, D] };
-    case "AC_BD":
-      return { team1: [A, C], team2: [B, D] };
-    case "AD_BC":
-      return { team1: [A, D], team2: [B, C] };
-  }
-};
-
-const getTeamLabelForPairing = (pairing: Pairing, team: 1 | 2, players: string[]) => {
-  const [A, B, C, D] = players;
-  switch (pairing) {
-    case "AB_CD":
-      return team === 1 ? `${A} & ${B}` : `${C} & ${D}`;
-    case "AC_BD":
-      return team === 1 ? `${A} & ${C}` : `${B} & ${D}`;
-    case "AD_BC":
-      return team === 1 ? `${A} & ${D}` : `${B} & ${C}`;
-  }
-};
-
-// Segment section component defined outside Home to prevent re-mounting on state changes
-function SegmentSection({
-  title,
-  pairing,
-  setPairing,
-  team1Points,
-  setTeam1Points,
-  team2Points,
-  setTeam2Points,
-  players,
-  stakePerPoint,
-}: {
-  title: string;
-  pairing: Pairing;
-  setPairing: (p: Pairing) => void;
-  team1Points: number;
-  setTeam1Points: (p: number) => void;
-  team2Points: number;
-  setTeam2Points: (p: number) => void;
-  players: string[];
-  stakePerPoint: number;
-}) {
-  const pointDiff = team1Points - team2Points;
-  const teams = getTeamsForPairing(pairing, players);
-  const playerAmount = Math.abs(pointDiff) * stakePerPoint;
-  const winners = pointDiff > 0 ? teams.team1 : teams.team2;
-  const losers = pointDiff > 0 ? teams.team2 : teams.team1;
-
+export default function HomePage() {
   return (
-    <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-      <h2 className="text-xl font-semibold mb-4">{title}</h2>
-
-      {/* Pairing Selector */}
-      <div className="mb-4">
-        <label className="text-sm opacity-70 block mb-1">Team Pairing</label>
-        <select
-          value={pairing}
-          onChange={(e) => setPairing(e.target.value as Pairing)}
-          className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-        >
-          {PAIRING_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-gray-800">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Team Points */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs opacity-70 mb-1 truncate">
-            {getTeamLabelForPairing(pairing, 1, players)}
-          </div>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            value={team1Points || ""}
-            onChange={(e) => setTeam1Points(parseFloat(e.target.value) || 0)}
-            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
-            placeholder="0"
-          />
+    <>
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-brand-green-dark to-brand-green py-24 px-4 text-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">A World of Possibilities</h1>
+          <p className="text-lg text-green-100 leading-relaxed mb-8 max-w-3xl mx-auto">
+            Established in 2007, the Fore Our Schools Foundation grew from Moraga school parents
+            wanting to create an event in which camaraderie, community support, and fun would
+            generate funds for their schools. Parents representing the Moraga elementary schools,
+            local merchants, and Moraga Country Club joined forces to create the 1st Annual Fore Our
+            Schools Golf Tournament in 2008. The success and community camaraderie generated from the
+            annual Fore Our Schools Golf Tournament led the parents to create other events in support
+            of the Moraga School District and Moraga Education Foundation.
+          </p>
+          <Link
+            href="/about"
+            className="inline-block bg-brand-gold text-white font-semibold px-8 py-3 rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            Learn More
+          </Link>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="text-xs opacity-70 mb-1 truncate">
-            {getTeamLabelForPairing(pairing, 2, players)}
-          </div>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            value={team2Points || ""}
-            onChange={(e) => setTeam2Points(parseFloat(e.target.value) || 0)}
-            className="w-full px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-lg"
-            placeholder="0"
-          />
-        </div>
-      </div>
+      </section>
 
-      {/* Per-segment results */}
-      {pointDiff !== 0 && (
-        <div className="mt-4 pt-4 border-t border-white/10">
-          <div className="text-sm font-medium mb-2 opacity-70">{title} Results</div>
-          <div className="grid grid-cols-2 gap-2">
-            {losers.map((player) => (
-              <div
-                key={player}
-                className="flex justify-between text-sm bg-red-500/10 rounded px-2 py-1"
-              >
-                <span>{player}</span>
-                <span className="font-mono text-red-400">-${playerAmount.toFixed(2)}</span>
+      {/* Featured Event */}
+      <section className="py-16 px-4 bg-brand-green-light">
+        <div className="max-w-4xl mx-auto">
+          <SectionHeading title={UPCOMING_EVENT.name} />
+          <div className="bg-white rounded-xl shadow-md p-8">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+              <div className="flex items-center gap-2 text-brand-green-dark font-semibold">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {UPCOMING_EVENT.date}
               </div>
-            ))}
-            {winners.map((player) => (
+              <div className="flex items-center gap-2 text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {UPCOMING_EVENT.location}
+              </div>
+            </div>
+            <p className="text-gray-700 leading-relaxed mb-6">{UPCOMING_EVENT.description}</p>
+            <Link
+              href="/events"
+              className="inline-block bg-brand-green text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-800 transition-colors"
+            >
+              View Details
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Schools */}
+      <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <SectionHeading
+            title="Our Schools"
+            subtitle="Fore Our Schools Foundation organizes community events to raise funds to support the Moraga Education Foundation (MEF) and the public schools within Moraga."
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {SCHOOLS.map((school) => (
               <div
-                key={player}
-                className="flex justify-between text-sm bg-green-500/10 rounded px-2 py-1"
+                key={school.name}
+                className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
               >
-                <span>{player}</span>
-                <span className="font-mono text-green-400">+${playerAmount.toFixed(2)}</span>
+                <div className="w-10 h-10 bg-brand-green-light rounded-lg flex items-center justify-center mb-3">
+                  <svg className="w-5 h-5 text-brand-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-brand-green-dark">{school.name}</h3>
               </div>
             ))}
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function Home() {
-  const [gameMode, setGameMode] = useState<GameMode>("9hole");
-  const [stakePerPoint, setStakePerPoint] = useState(DEFAULT_STAKE);
-  const [players, setPlayers] = useState(["Player A", "Player B", "Player C", "Player D"]);
-
-  // Segment 1: Front 9 or Holes 1-6
-  const [seg1Pairing, setSeg1Pairing] = useState<Pairing>("AB_CD");
-  const [seg1Team1Points, setSeg1Team1Points] = useState(0);
-  const [seg1Team2Points, setSeg1Team2Points] = useState(0);
-
-  // Segment 2: Back 9 or Holes 7-12
-  const [seg2Pairing, setSeg2Pairing] = useState<Pairing>("AB_CD");
-  const [seg2Team1Points, setSeg2Team1Points] = useState(0);
-  const [seg2Team2Points, setSeg2Team2Points] = useState(0);
-
-  // Segment 3: Holes 13-18 (6-hole mode only)
-  const [seg3Pairing, setSeg3Pairing] = useState<Pairing>("AB_CD");
-  const [seg3Team1Points, setSeg3Team1Points] = useState(0);
-  const [seg3Team2Points, setSeg3Team2Points] = useState(0);
-
-  const segmentLabels = gameMode === "9hole"
-    ? ["Front 9", "Back 9"]
-    : ["Holes 1–6", "Holes 7–12", "Holes 13–18"];
-
-  const segmentShortLabels = gameMode === "9hole"
-    ? ["F9", "B9"]
-    : ["1–6", "7–12", "13–18"];
-
-  const updatePlayerName = (index: number, name: string) => {
-    const newPlayers = [...players];
-    newPlayers[index] = name;
-    setPlayers(newPlayers);
-  };
-
-  const calcSegment = (pairing: Pairing, team1Points: number, team2Points: number) => {
-    const teams = getTeamsForPairing(pairing, players);
-    const diff = team1Points - team2Points;
-    const amounts: { [key: string]: number } = {};
-    players.forEach((name) => { amounts[name] = 0; });
-
-    if (diff !== 0) {
-      const playerAmount = Math.abs(diff) * stakePerPoint;
-      const winners = diff > 0 ? teams.team1 : teams.team2;
-      const losers = diff > 0 ? teams.team2 : teams.team1;
-      losers.forEach((l) => { amounts[l] -= playerAmount; });
-      winners.forEach((w) => { amounts[w] += playerAmount; });
-    }
-    return amounts;
-  };
-
-  const playerNets = useMemo(() => {
-    const seg1 = calcSegment(seg1Pairing, seg1Team1Points, seg1Team2Points);
-    const seg2 = calcSegment(seg2Pairing, seg2Team1Points, seg2Team2Points);
-    const seg3 = gameMode === "6hole"
-      ? calcSegment(seg3Pairing, seg3Team1Points, seg3Team2Points)
-      : null;
-
-    return players
-      .map((name) => {
-        const segments = [seg1[name], seg2[name]];
-        if (seg3) segments.push(seg3[name]);
-        const total = segments.reduce((sum, v) => sum + v, 0);
-        return { name, segments, total };
-      })
-      .sort((a, b) => b.total - a.total);
-  }, [
-    players,
-    gameMode,
-    seg1Pairing, seg1Team1Points, seg1Team2Points,
-    seg2Pairing, seg2Team1Points, seg2Team2Points,
-    seg3Pairing, seg3Team1Points, seg3Team2Points,
-    stakePerPoint,
-  ]);
-
-  const resetAll = () => {
-    setPlayers(["Player A", "Player B", "Player C", "Player D"]);
-    setSeg1Pairing("AB_CD");
-    setSeg1Team1Points(0);
-    setSeg1Team2Points(0);
-    setSeg2Pairing("AB_CD");
-    setSeg2Team1Points(0);
-    setSeg2Team2Points(0);
-    setSeg3Pairing("AB_CD");
-    setSeg3Team1Points(0);
-    setSeg3Team2Points(0);
-    setStakePerPoint(DEFAULT_STAKE);
-  };
-
-  return (
-    <div className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2">🏌️ Dots</h1>
-          <p className="text-lg opacity-80">Payout Calculator</p>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-sm opacity-60">$</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9]*\.?[0-9]*"
-              value={stakePerPoint}
-              onChange={(e) => setStakePerPoint(parseFloat(e.target.value) || 0)}
-              className="w-20 px-2 py-1 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono text-sm"
-            />
-            <span className="text-sm opacity-60">per point</span>
+          <div className="text-center mt-8">
+            <Link
+              href="/about"
+              className="text-brand-green font-semibold hover:text-brand-green-dark transition-colors"
+            >
+              Learn more about our schools &rarr;
+            </Link>
           </div>
         </div>
+      </section>
 
-        {/* Game Mode Selector */}
-        <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-          <h2 className="text-lg font-semibold mb-3">Game Format</h2>
-          <select
-            value={gameMode}
-            onChange={(e) => setGameMode(e.target.value as GameMode)}
-            className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-          >
-            <option value="9hole" className="bg-gray-800">9-Hole Pairings (Front 9 / Back 9)</option>
-            <option value="6hole" className="bg-gray-800">6-Hole Pairings (switch every 6 holes)</option>
-          </select>
-        </div>
-
-        {/* Player Names */}
-        <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 mb-4 shadow-lg">
-          <h2 className="text-lg font-semibold mb-3">Players</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {players.map((name, index) => (
-              <input
-                key={index}
-                type="text"
-                value={name}
-                onChange={(e) => updatePlayerName(index, e.target.value)}
-                className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                placeholder={`Player ${String.fromCharCode(65 + index)}`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Segment 1 */}
-        <SegmentSection
-          title={segmentLabels[0]}
-          pairing={seg1Pairing}
-          setPairing={setSeg1Pairing}
-          team1Points={seg1Team1Points}
-          setTeam1Points={setSeg1Team1Points}
-          team2Points={seg1Team2Points}
-          setTeam2Points={setSeg1Team2Points}
-          players={players}
-          stakePerPoint={stakePerPoint}
-        />
-
-        {/* Segment 2 */}
-        <SegmentSection
-          title={segmentLabels[1]}
-          pairing={seg2Pairing}
-          setPairing={setSeg2Pairing}
-          team1Points={seg2Team1Points}
-          setTeam1Points={setSeg2Team1Points}
-          team2Points={seg2Team2Points}
-          setTeam2Points={setSeg2Team2Points}
-          players={players}
-          stakePerPoint={stakePerPoint}
-        />
-
-        {/* Segment 3 (6-hole mode only) */}
-        {gameMode === "6hole" && (
-          <SegmentSection
-            title={segmentLabels[2]}
-            pairing={seg3Pairing}
-            setPairing={setSeg3Pairing}
-            team1Points={seg3Team1Points}
-            setTeam1Points={setSeg3Team1Points}
-            team2Points={seg3Team2Points}
-            setTeam2Points={setSeg3Team2Points}
-            players={players}
-            stakePerPoint={stakePerPoint}
-          />
-        )}
-
-        {/* Reset Button */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={resetAll}
-            className="px-4 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors text-sm"
-          >
-            Reset All
-          </button>
-        </div>
-
-        {/* Net Results */}
-        {playerNets.some((p) => p.total !== 0) && (
-          <div className="bg-white/10 backdrop-blur rounded-xl p-4 sm:p-6 shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">📊 Final Results</h2>
-            <div className="space-y-2">
-              {playerNets.map((player, index) => (
-                <div
-                  key={index}
-                  className={`flex justify-between items-center p-3 rounded-lg ${
-                    player.total > 0
-                      ? "bg-green-500/20"
-                      : player.total < 0
-                        ? "bg-red-500/20"
-                        : "bg-white/5"
-                  }`}
-                >
-                  <div>
-                    <span className="font-medium">{player.name}</span>
-                    <div className="text-xs opacity-60">
-                      {player.segments.map((amt, i) => (
-                        <span key={i}>
-                          {i > 0 && " | "}
-                          {segmentShortLabels[i]}: {amt >= 0 ? "+" : ""}${amt.toFixed(2)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <span
-                    className={`font-mono font-bold text-lg ${
-                      player.total > 0 ? "text-green-400" : player.total < 0 ? "text-red-400" : ""
-                    }`}
-                  >
-                    {player.total > 0 ? "+" : ""}${player.total.toFixed(2)}
+      {/* Board of Directors */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <SectionHeading title="Our Board of Directors" />
+          <p className="text-center text-gray-600 mb-8 -mt-6">
+            The {SITE_INFO.name} is a qualified 501(c)(3) not-for-profit organization and
+            contributions are tax-deductible to the extent permitted by law (Tax ID#{" "}
+            {SITE_INFO.taxId}).
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {BOARD_MEMBERS.map((member) => (
+              <div
+                key={member.name}
+                className="bg-white rounded-xl p-6 shadow-sm text-center"
+              >
+                <div className="w-14 h-14 bg-brand-green-light rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-brand-green font-bold text-lg">
+                    {member.name.charAt(0)}
                   </span>
                 </div>
-              ))}
-            </div>
+                <h3 className="font-semibold text-brand-green-dark">{member.name}</h3>
+                <p className="text-sm text-gray-500">{member.role}</p>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Rules Reference */}
-        <details className="mt-6 bg-white/5 rounded-xl p-4">
-          <summary className="cursor-pointer font-semibold">📖 Quick Rules Reference</summary>
-          <div className="mt-4 text-sm opacity-80 space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Teams</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>
-                  Off the 1st tee, the two players on the right and left are partners for the first
-                  segment
-                </li>
-                <li>
-                  <strong>9-Hole mode:</strong> The losing team after the front 9 can switch partners
-                  (flip a tee) or keep teams for the back 9
-                </li>
-                <li>
-                  <strong>6-Hole mode:</strong> Teams can be re-selected every 6 holes (3 segments
-                  per round)
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Points (6 available per hole)</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>1 point for GIR (Green in Regulation)</li>
-                <li>2 points for low-man (net)</li>
-                <li>2 points for low-team (net)</li>
-                <li>1 point for birdie (gross only)</li>
-                <li>If a team gets all 6 points on a hole, points are doubled to 12</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Press & Roll</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Team in the lead tees off first each hole</li>
-                <li>
-                  <strong>Press:</strong> Before teeing off, the team behind can press — doubles
-                  points for EVERY remaining hole in that segment
-                </li>
-                <li>
-                  <strong>Roll:</strong> After the first group tees off, the team behind can roll —
-                  doubles points for ONLY that hole
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Payout</h3>
-              <ul className="list-disc list-inside space-y-1">
-                <li>At the end of each segment, calculate team point differential</li>
-                <li>Each player on the losing team pays each player on the winning team</li>
-                <li>Payment = point differential × stake per point</li>
-                <li>Payments via Venmo or cash</li>
-              </ul>
-            </div>
+          <div className="text-center mt-8">
+            <Link
+              href="/contact"
+              className="text-brand-green font-semibold hover:text-brand-green-dark transition-colors"
+            >
+              Meet the full team &rarr;
+            </Link>
           </div>
-        </details>
+        </div>
+      </section>
 
-        {/* Footer */}
-        <footer className="text-center mt-8 text-sm opacity-50">Dots Payout Calculator</footer>
-      </div>
-    </div>
+      {/* Location */}
+      <section className="py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <SectionHeading title="Location" />
+          <p className="text-gray-600 text-lg mb-6">{SITE_INFO.address}</p>
+          <div className="rounded-xl overflow-hidden shadow-md">
+            <iframe
+              title="Fore Our Schools Foundation Location"
+              src={`https://maps.google.com/maps?q=${SITE_INFO.mapCoords.lat},${SITE_INFO.mapCoords.lng}&z=15&output=embed`}
+              width="100%"
+              height="350"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
